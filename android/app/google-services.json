@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "769602730367",
+    "project_id": "towtown-6f8d7",
+    "storage_bucket": "towtown-6f8d7.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:769602730367:android:54f8d0d1cd8cb3b903c24a",
+        "android_client_info": {
+          "package_name": "com.towtown"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "769602730367-pueikepe84oosg6vih7i1mid76iphm3m.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBQUwkRr6e8Vdr0KKvQOINUWzD2LVvsoxE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "769602730367-pueikepe84oosg6vih7i1mid76iphm3m.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
