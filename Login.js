@@ -7,30 +7,37 @@ import auth from '@react-native-firebase/auth';
 export default function Login({navigation}) {
   const [emailString, setEmailString] = useState();
   const [passwordString, setpasswordString] = useState();
-  const [gotUserType, setGotUserType] = useState('');
+  const [GotUserInfo, setGotUserInfo] = useState();
   const [gotUserId, setGotUserId] = useState('');
 
   onChangeEmail = text => {
     setEmailString(text);
   };
   getUserFb = async () => {
+    console.log(auth().currentUser.uid);
     const gotUser = await firestore()
       .collection('Users')
       .doc(auth().currentUser.uid)
       .get();
-    setGotUserType(gotUser.data().userType);
+    setGotUserInfo(gotUser.data());
+    console.log(gotUser);
   };
   timeout = ms => {
     return new Promise(resolve => setTimeout(resolve, ms));
   };
-  loginUser = () => {
+  loginUser = async () => {
+    const gotUser = await firestore()
+      .collection('Users')
+      .doc(auth().currentUser.uid)
+      .get();
     auth()
       .signInWithEmailAndPassword(emailString, passwordString)
       .then(() => {
         console.log('Signed in!');
-        getUserFb();
-        timeout(1000).then(() => {
-          if (gotUserType == 'towUser') {
+        console.log(gotUser._data.userType, 'UT');
+        timeout(200).then(() => {
+          console.log(gotUser, 'gotted');
+          if (gotUser._data.userType === 'towUser') {
             navigation.navigate('CallHelp');
           } else {
             navigation.navigate('TowOperation');

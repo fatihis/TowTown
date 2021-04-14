@@ -78,6 +78,7 @@ const TowOperation = ({route, navigation}) => {
         console.log(e);
       });
   };
+
   return (
     <SafeAreaView style={styles.mainContainer}>
       <Button title={buttonTitleState} onPress={sendGeoLocation} />
