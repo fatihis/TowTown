@@ -1,6 +1,7 @@
 import React, {useState, useEffect} from 'react';
 
-import firestore from '@react-native-firebase/firestore';
+import firestore, {firebase} from '@react-native-firebase/firestore';
+import auth from '@react-native-firebase/auth';
 // import RNLocation from 'react-native-location';
 import {
   SafeAreaView,
@@ -13,7 +14,7 @@ import {
   View,
   Dimensions,
 } from 'react-native';
-
+import {getDistance, MAXLAT} from 'geolib';
 import Geolocation from '@react-native-community/geolocation';
 
 const CallHelp = ({navigation}) => {
@@ -26,6 +27,7 @@ const CallHelp = ({navigation}) => {
   const windowHeight = Dimensions.get('window').height;
   const [locationLongState, setLocationLongState] = useState(0);
   const [locationLatState, setLocationLatState] = useState(0);
+  const [closestTowIdState, setClosestTowIdState] = useState('');
 
   useEffect(() => {
     Geolocation.getCurrentPosition(info => {
@@ -48,22 +50,55 @@ const CallHelp = ({navigation}) => {
 
   const sendGeoLocation = () => {
     permissionHandle();
-    console.log('hey');
     const yourGeoPoint = new firestore.GeoPoint(
       locationLatState,
       locationLongState,
     );
     console.log(yourGeoPoint);
     firestore()
+      .collection('Tow-service')
+      .get()
+      .then(querySnapshot => {
+        console.log('Total Tow Active: ', querySnapshot.size);
+        var closestTowDistance = 1000000000;
+        var closestTowID = '';
+        console.log('______EVALUATING DISTANCE______');
+        querySnapshot.forEach(documentSnapshot => {
+          var distance = getDistance(
+            {
+              latitude: documentSnapshot.data().geoLocation._latitude,
+              longitude: documentSnapshot.data().geoLocation._longitude,
+            },
+            {latitude: locationLatState, longitude: locationLongState},
+          );
+
+          console.log('|Distance ', distance, 'M             |');
+          if (distance < closestTowDistance) {
+            console.log('|-------CLOSER TOW FOUND---------|');
+            closestTowDistance = distance;
+            closestTowID = documentSnapshot.id;
+            console.log('|New Closest Tow :', closestTowDistance, 'M       |');
+            console.log('|--------------------------------|');
+          }
+        });
+        console.log('|________________________________|');
+        setClosestTowIdState(closestTowID);
+        console.log('Closest Tow ID', closestTowIdState);
+      });
+    console.log('Sending Request to Server...');
+    firestore()
       .collection('user-requests')
       .add({
-        id: 12123,
-        geoLocation: yourGeoPoint,
+        userUid: auth().currentUser.uid,
+        userGeoLocation: yourGeoPoint,
+        towUid: closestTowIdState,
       })
       .then(() => {
-        console.log('User added!');
+        console.log('!!!Request sent!!!');
       });
   };
+
+  findNearestDriver = async () => {};
   return (
     <SafeAreaView style={styles.mainContainer}>
       <Button title="Call TOW" onPress={sendGeoLocation} />
