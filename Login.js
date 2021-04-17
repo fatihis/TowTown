@@ -7,12 +7,13 @@ import auth from '@react-native-firebase/auth';
 export default function Login({navigation}) {
   const [emailString, setEmailString] = useState();
   const [passwordString, setpasswordString] = useState();
-  const [GotUserInfo, setGotUserInfo] = useState();
+  const [gotUserInfo, setGotUserInfo] = useState();
   const [gotUserId, setGotUserId] = useState('');
 
   onChangeEmail = text => {
     setEmailString(text);
   };
+
   getUserFb = async () => {
     console.log(auth().currentUser.uid);
     const gotUser = await firestore()
@@ -52,6 +53,27 @@ export default function Login({navigation}) {
         console.error(error);
       });
   };
+  loginTest = async (emails, passwords, UT) => {
+    const gotUser = await firestore()
+      .collection('Users')
+      .doc(auth().currentUser.uid)
+      .get();
+
+    auth()
+      .signInWithEmailAndPassword(emails, passwords)
+      .then(() => {
+        console.log('Signed in!');
+        console.log(gotUser._data.userType, 'UT');
+      });
+    timeout(200).then(() => {
+      console.log(gotUser);
+      if (gotUser._data.userType === 'towUser') {
+        navigation.navigate('CallHelp');
+      } else {
+        navigation.navigate('TowOperation');
+      }
+    });
+  };
   onChangePassword = text => {
     setpasswordString(text);
   };
@@ -74,6 +96,18 @@ export default function Login({navigation}) {
           secureTextEntry={true}
         />
         <Button title="Login" onPress={loginUser}></Button>
+        <Button
+          title="user"
+          style={styles.testButtons}
+          onPress={() =>
+            loginTest('isk.fatih1@gmail.com', '123fatih1', 'towUser')
+          }></Button>
+        <Button
+          title="tow"
+          style={styles.testButtons}
+          onPress={() =>
+            loginTest('fatih23psn@gmail.com', '123fatih', 'towDriver')
+          }></Button>
       </View>
     </View>
   );
@@ -88,6 +122,10 @@ const styles = StyleSheet.create({
     marginTop: '20%',
     alignContent: 'center',
     alignItems: 'center',
+  },
+  testButtons: {
+    marginVertical: 10,
+    backgroundColor: 'red',
   },
   input: {
     height: '10%',

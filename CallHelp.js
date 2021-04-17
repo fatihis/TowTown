@@ -1,5 +1,5 @@
 import React, {useState, useEffect} from 'react';
-
+import {NeuButton} from 'react-native-neu-element';
 import firestore, {firebase} from '@react-native-firebase/firestore';
 import auth from '@react-native-firebase/auth';
 // import RNLocation from 'react-native-location';
@@ -28,6 +28,8 @@ const CallHelp = ({navigation}) => {
   const [locationLongState, setLocationLongState] = useState(0);
   const [locationLatState, setLocationLatState] = useState(0);
   const [closestTowIdState, setClosestTowIdState] = useState('');
+  const [neuButtonColor, setNeuButtonColor] = useState('#eef2f9');
+  const [callTowText, setCallTowText] = useState('CALL');
 
   useEffect(() => {
     Geolocation.getCurrentPosition(info => {
@@ -36,6 +38,10 @@ const CallHelp = ({navigation}) => {
     });
     return () => {};
   }, []);
+
+  timeout = ms => {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  };
   const permissionHandle = async () => {
     console.log('here');
 
@@ -50,6 +56,8 @@ const CallHelp = ({navigation}) => {
 
   const sendGeoLocation = () => {
     permissionHandle();
+    setNeuButtonColor('#eb4034');
+    setCallTowText('Calling...');
     const yourGeoPoint = new firestore.GeoPoint(
       locationLatState,
       locationLongState,
@@ -83,15 +91,29 @@ const CallHelp = ({navigation}) => {
         });
         console.log('|________________________________|');
         setClosestTowIdState(closestTowID);
-        console.log('Closest Tow ID', closestTowIdState);
+        console.log('Closest Tow ID', closestTowID, '!');
+        if (closestTowIdState != '') {
+          sendTowRequest(closestTowID, yourGeoPoint);
+          setCallTowText('On it s way');
+          alert('Your location and contact info sent to nearest tow.');
+        } else {
+          console.log('Trying to reconnect to the server...');
+          timeout(300).then(() => {
+            sendTowRequest(closestTowID, yourGeoPoint);
+            setCallTowText('On it s way');
+          });
+        }
       });
+  };
+
+  const sendTowRequest = (closestTowID, yourGeoPoint) => {
     console.log('Sending Request to Server...');
     firestore()
       .collection('user-requests')
       .add({
         userUid: auth().currentUser.uid,
         userGeoLocation: yourGeoPoint,
-        towUid: closestTowIdState,
+        towUid: closestTowID,
       })
       .then(() => {
         console.log('!!!Request sent!!!');
@@ -101,7 +123,17 @@ const CallHelp = ({navigation}) => {
   findNearestDriver = async () => {};
   return (
     <SafeAreaView style={styles.mainContainer}>
-      <Button title="Call TOW" onPress={sendGeoLocation} />
+      <NeuButton
+        color={neuButtonColor}
+        width={200}
+        height={200}
+        borderRadius={16}
+        onPress={sendGeoLocation}
+        isConvex
+        style={{marginRight: 30}}>
+        <Text style={{fontSize: 22}}>{callTowText}</Text>
+      </NeuButton>
+      {/* <Button title="Call TOW" onPress={sendGeoLocation} /> */}
     </SafeAreaView>
   );
 };
