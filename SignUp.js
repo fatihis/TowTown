@@ -1,5 +1,5 @@
 import React, {useState} from 'react';
-import {View, Text, StyleSheet, TextInput, Button} from 'react-native';
+import {View, Text, StyleSheet, TextInput, Button, Picker} from 'react-native';
 
 import firestore from '@react-native-firebase/firestore';
 import auth from '@react-native-firebase/auth';
@@ -7,22 +7,30 @@ import auth from '@react-native-firebase/auth';
 export default function Login({navigation}) {
   const [emailString, setEmailString] = useState();
   const [passwordString, setpasswordString] = useState();
-  const [userTypeString, setuserTypeString] = useState('towDriver');
+  const [userTypeString, setuserTypeString] = useState('towUser');
   const [currentUid, setCurrentUid] = useState();
+  const [selectedValue, setSelectedValue] = useState(0);
+  const [phoneNumberString, setPhoneNumberString] = useState(0);
   onPressSignUp = () =>
     auth()
       .createUserWithEmailAndPassword(emailString, passwordString)
       .then(() => {
         const uidGet = auth().currentUser.uid;
         setCurrentUid(uidGet);
-        console.log(uidGet);
-
-        firestore().collection('Users').doc(uidGet).set({
-          uid: uidGet,
-          email: emailString,
-          userType: userTypeString,
-        });
-        alert('User account created & signed in!');
+        firestore()
+          .collection('Users')
+          .doc(uidGet)
+          .set({
+            uid: uidGet,
+            email: emailString,
+            userType: userTypeString,
+            phoneNumber: phoneNumberString,
+            carType: selectedValue,
+          })
+          .then(() => {
+            navigation.navigate('Login');
+            alert('User account created!');
+          });
       })
       .catch(error => {
         if (error.code === 'auth/email-already-in-use') {
@@ -45,6 +53,9 @@ export default function Login({navigation}) {
   onChangePassword = text => {
     setpasswordString(text);
   };
+  const onChangePhoneNumber = text => {
+    setPhoneNumberString(text);
+  };
 
   return (
     <View style={{height: '100%', width: '100%'}}>
@@ -63,7 +74,20 @@ export default function Login({navigation}) {
           keyboardType="default"
           secureTextEntry={true}
         />
-
+        <TextInput
+          style={styles.input}
+          onChangeText={text => onChangePhoneNumber(text)}
+          placeholder="Phone Number"
+          keyboardType="phone-pad"
+        />
+        <Picker
+          selectedValue={selectedValue}
+          style={{height: 50, width: 150}}
+          onValueChange={(itemValue, itemIndex) => setSelectedValue(itemValue)}>
+          <Picker.Item label="Sedan" value="Sedan" />
+          <Picker.Item label="Truck" value="Truck" />
+          <Picker.Item label="Hatchback" value="Hatchback" />
+        </Picker>
         <Button
           style={styles.signUpButton}
           title="Sign Up"
