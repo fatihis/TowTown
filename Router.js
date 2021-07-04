@@ -6,6 +6,7 @@ import Login from './Login';
 import CallHelp from './CallHelp';
 import SignUp from './SignUp';
 import TowOperation from './TowOperation';
+import Profile from './Profile';
 
 const Stack = createStackNavigator();
 
@@ -17,6 +18,7 @@ function Router() {
         <Stack.Screen name="CallHelp" component={CallHelp} />
         <Stack.Screen name="SignUp" component={SignUp} />
         <Stack.Screen name="TowOperation" component={TowOperation} />
+        <Stack.Screen name="Profile" component={Profile} />
       </Stack.Navigator>
     </NavigationContainer>
   );

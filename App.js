@@ -17,7 +17,7 @@ import {
   useColorScheme,
   View,
 } from 'react-native';
-
+import { LogBox } from 'react-native';
 import {
   Colors,
   DebugInstructions,
@@ -27,8 +27,12 @@ import {
 } from 'react-native/Libraries/NewAppScreen';
 
 const App = () => {
+  LogBox.ignoreLogs(['Warning: ...']); // Ignore log notification by message
   return <NavigationContainer></NavigationContainer>;
 };
+
+
+
 
 const styles = StyleSheet.create({
   sectionContainer: {

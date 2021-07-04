@@ -15,6 +15,7 @@ import {
   useColorScheme,
   View,
   Dimensions,
+  Linking,
 } from 'react-native';
 
 import Geolocation from '@react-native-community/geolocation';
@@ -30,7 +31,7 @@ const TowOperation = ({route, navigation}) => {
   const windowHeight = Dimensions.get('window').height;
   const [locationLongState, setLocationLongState] = useState(0);
   const [locationLatState, setLocationLatState] = useState(0);
-  const [currentTowState, setCurrentTowState] = useState(false);
+  const [currentTowState, setCurrentTowState] = useState(true);
   const [buttonTitleState, setButtonTitleState] = useState('Ready');
   const [matchedUserInformation, setMatchedUserInformation] = useState();
   const [matchedUserCarTypeText, setMatchedUserCarTypeText] = useState('');
@@ -38,29 +39,41 @@ const TowOperation = ({route, navigation}) => {
   const [matchedUserLocation, setMatchedUserLocation] = useState('');
   const [towIdState, setTowIdState] = useState('');
   const [neuButtonColor, setNeuButtonColor] = useState('#eef2f9');
+  const [hasAssignment, setHasAssignment] = useState(false);
+  const [documentId, setDocumentId] = useState();
   const refRBSheet = useRef();
   useEffect(() => {
     Geolocation.getCurrentPosition(info => {
       setLocationLatState(info.coords.latitude),
         setLocationLongState(info.coords.longitude);
     });
-    async function getCurrentUid() {
-      const currentUserUidConst = await firebase.auth().currentUser.uid;
-      setTowIdState(currentUserUidConst);
-    }
-    getCurrentUid();
+    const {towId} = route.params;
+
+    // async function getCurrentUid() {
+    //   const currentUserUidConst = await firebase.auth().currentUser.uid;
+    //   setTowIdState(currentUserUidConst);
+    // }
+    // getCurrentUid();
+
+    console.log(towIdState, 'towid');
     const subscriber = firestore()
       .collection('user-requests')
-      // .where('towUid', '==', towIdState)
       .onSnapshot(documentSnapshot => {
-        console.log('User data: ', documentSnapshot.docs);
+        console.log('Tow request data: ', documentSnapshot.docs);
+
         documentSnapshot.docs.forEach(doc => {
-          if (doc._data.towUid == towIdState) {
+          if (doc._data.towUid == towId) {
             console.log('it s a match!', doc._data);
 
             setMatchedUserLocation(doc._data.userGeoLocation);
+            console.log('LOCATION', matchedUserLocation);
             getMatchedUserInfo(doc._data.userUid);
+            setDocumentId(doc.id);
+            setHasAssignment(true);
             // setMatchedUserCarTypeText(matchedUserInformation.carType);
+            if (doc._data.done == true) {
+              refRBSheet.current.close();
+            }
           }
         });
       });
@@ -68,47 +81,82 @@ const TowOperation = ({route, navigation}) => {
     // Stop listening for updates when no longer required
     return () => subscriber();
   }, []);
+  const finalizeRequest = () => {
+    const {towId} = route.params;
+    firestore()
+      .collection('Tow-service')
+      .doc(towId)
+      .set({
+        status: true,
+      })
+      .then(() => {
+        console.log('Position Activated');
+      })
+      .catch(e => {
+        console.log(e);
+      });
+  };
   const getMatchedUserInfo = async matchedUid => {
     const matchedUserInfo = await firestore()
       .collection('Users')
       .doc(matchedUid)
       .get();
-    refRBSheet.current.open();
-    timeout(300).then(() => {
-      console.log(matchedUserInfo, ' gesss');
-      // setMatchedUserInformation(matchedUserInfo.data());
 
-      // setMatchedUserCarTypeText(matchedUserInformation.carType);
+    timeout(300).then(() => {
+      console.log('Matched User Info:', matchedUserInfo);
+      // setMatchedUserInformation(matchedUserInfo.data());
+      setMatchedUserPhoneNumber(matchedUserInfo.data().phoneNumber);
+      setMatchedUserCarTypeText(matchedUserInfo.data().carType);
     });
+    refRBSheet.current.open();
   };
+
   const towStateHandler = () => {
+    const yourGeoPoint = new firestore.GeoPoint(
+      locationLatState,
+      locationLongState,
+    );
     setCurrentTowState(!currentTowState);
     if (currentTowState) {
       setButtonTitleState('You are online.');
       setNeuButtonColor('#009900');
-      sendGeoLocation();
+      const {towId} = route.params;
       firestore()
-        .collection('Users')
-        .doc('towIdState')
-        .update({
-          status: false,
+        .collection('Tow-service')
+        .doc(towId)
+        .set({
+          id: towId,
+          geoLocation: yourGeoPoint,
+          status: true,
         })
         .then(() => {
-          console.log('User updated!');
+          console.log('positionActivated');
+        })
+        .catch(e => {
+          console.log(e);
         });
     } else {
       setButtonTitleState('You are offline.');
       setNeuButtonColor('#878787');
+      const {towId} = route.params;
       firestore()
-        .collection('Users')
-        .doc(towIdState)
-        .update({
+        .collection('Tow-service')
+        .doc(towId)
+        .set({
+          id: towId,
+          geoLocation: yourGeoPoint,
           status: false,
         })
         .then(() => {
-          console.log('User updated!');
+          console.log('positionActivated');
+        })
+        .catch(e => {
+          console.log(e);
         });
     }
+  };
+  const callPhone = () => {
+    Linking.openURL(`tel:${matchedUserPhoneNumber}`);
   };
 
   timeout = ms => {
@@ -133,21 +181,54 @@ const TowOperation = ({route, navigation}) => {
       locationLongState,
     );
     console.log(yourGeoPoint);
-
+    const {towId} = route.params;
+    towStateHandler();
+    // firestore()
+    //   .collection('Tow-service')
+    //   .doc(towId)
+    //   .set({
+    //     id: towId,
+    //     geoLocation: yourGeoPoint,
+    //     status: true,
+    //   })
+    //   .then(() => {
+    //     console.log('positionActivated');
+    //   })
+    //   .catch(e => {
+    //     console.log(e);
+    //   });
+  };
+  const rejectCall = () => {
+    console.log('DOCID', auth().currentUser.uid);
+    setButtonTitleState('You are offline.');
+    setNeuButtonColor('#878787');
+    setCurrentTowState(false);
     firestore()
       .collection('Tow-service')
-      .doc(towIdState)
-      .set({
-        id: towIdState,
-        geoLocation: yourGeoPoint,
-        status: true,
+      .doc(auth().currentUser.uid)
+      .update({
+        status: false,
       })
       .then(() => {
-        console.log('positionActivated');
-      })
-      .catch(e => {
-        console.log(e);
+        console.log('Gone offline');
+        refRBSheet.current.close();
       });
+    firestore()
+      .collection('user-requests')
+      .doc(auth().currentUser.uid)
+      .update({
+        status: false,
+      })
+      .then(() => {
+        console.log('Request Rejected');
+      });
+  };
+  const openMaps = () => {
+    var scheme = Platform.OS === 'ios' ? 'maps:' : 'geo:';
+    var url =
+      scheme +
+      `${matchedUserLocation._latitude},${matchedUserLocation._longitude}`;
+    Linking.openURL(url);
   };
 
   return (
@@ -182,16 +263,30 @@ const TowOperation = ({route, navigation}) => {
           borderWidth={10}
           borderRadius={16}>
         </NeuBorderView> */}
-        <Text>Car Information</Text>
-        {/* <Text>{matchedUserCarTypeText}</Text> */}
-        {/* <NeuSpinner
-          color="#eef2f9"
-          size={50}
-          indicatorColor="#aaffc3" // Mint
-          duration={1000}
-        /> */}
-        {/* <Text>{{matchedUserLocation._longitutde}}</Text> */}
-        {/* <Text>{matchedUserPhoneNumber}</Text> */}
+
+        <Text style={styles.informationTextHeader}>Car Information</Text>
+        <Text style={styles.informationText}>
+          Car Type: {matchedUserCarTypeText}
+        </Text>
+        <Text style={styles.informationText}>
+          Phone Number:{' '}
+          <Text style={styles.informationPhone} onPress={() => callPhone()}>
+            {matchedUserPhoneNumber}
+          </Text>
+        </Text>
+        <View style={{flex: 1, height: '50%', width: '100%'}}>
+          <Button title="Reject" onPress={() => rejectCall()} color="#D53E1E" />
+        </View>
+        <NeuButton
+          color={neuButtonColor}
+          width={100}
+          height={60}
+          borderRadius={16}
+          onPress={() => openMaps()}
+          isConvex
+          style={{marginRight: 30, alignItems: 'center'}}>
+          <Text style={{fontSize: 22, textAlign: 'center'}}>Open Maps</Text>
+        </NeuButton>
       </RBSheet>
     </SafeAreaView>
   );
@@ -220,6 +315,18 @@ const styles = StyleSheet.create({
   },
   highlight: {
     fontWeight: '700',
+  },
+  informationTextHeader: {
+    fontSize: 30,
+    alignSelf: 'center',
+  },
+  informationText: {
+    paddingLeft: 30,
+    fontSize: 20,
+  },
+  informationPhone: {
+    fontSize: 20,
+    color: 'green',
   },
 });
 
